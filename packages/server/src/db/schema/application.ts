@@ -19,6 +19,7 @@ import { gitea } from "./gitea";
 import { github } from "./github";
 import { gitlab } from "./gitlab";
 import { mounts } from "./mount";
+import { patch } from "./patch";
 import { ports } from "./port";
 import { previewDeployments } from "./preview-deployments";
 import { redirects } from "./redirects";
@@ -94,6 +95,7 @@ export const applications = pgTable("application", {
 		.notNull()
 		.default("none"),
 	previewCustomCertResolver: text("previewCustomCertResolver"),
+	previewNetworkIds: text("previewNetworkIds").array(),
 	previewLimit: integer("previewLimit").default(3),
 	isPreviewDeploymentsActive: boolean("isPreviewDeploymentsActive").default(
 		false,
@@ -173,6 +175,7 @@ export const applications = pgTable("application", {
 	labelsSwarm: json("labelsSwarm").$type<LabelsSwarm>(),
 	networkSwarm: json("networkSwarm").$type<NetworkSwarm[]>(),
 	stopGracePeriodSwarm: bigint("stopGracePeriodSwarm", { mode: "bigint" }),
+	customNetworkIds: text("customNetworkIds").array(),
 	endpointSpecSwarm: json("endpointSpecSwarm").$type<EndpointSpecSwarm>(),
 	ulimitsSwarm: json("ulimitsSwarm").$type<UlimitsSwarm>(),
 	//
@@ -286,6 +289,7 @@ export const applicationsRelations = relations(
 			references: [registry.registryId],
 			relationName: "applicationRollbackRegistry",
 		}),
+		patches: many(patch),
 	}),
 );
 
@@ -364,8 +368,10 @@ const createSchema = createInsertSchema(applications, {
 	previewRequireCollaboratorPermissions: z.boolean().optional(),
 	watchPaths: z.array(z.string()).optional(),
 	previewLabels: z.array(z.string()).optional(),
+	previewNetworkIds: z.array(z.string()).nullable().optional(),
 	cleanCache: z.boolean().optional(),
 	stopGracePeriodSwarm: z.bigint().nullable(),
+	customNetworkIds: z.array(z.string()).nullable(),
 	endpointSpecSwarm: EndpointSpecSwarmSchema.nullable(),
 	ulimitsSwarm: UlimitsSwarmSchema.nullable(),
 });

@@ -44,6 +44,7 @@ import {
 	issueCommentExists,
 	updateIssueComment,
 } from "./github";
+import { generateApplyPatchesCommand } from "./patch";
 import {
 	findPreviewDeploymentById,
 	updatePreviewDeployment,
@@ -98,7 +99,11 @@ export const findApplicationById = async (applicationId: string) => {
 					project: true,
 				},
 			},
-			domains: true,
+			domains: {
+				with: {
+					network: true,
+				},
+			},
 			deployments: true,
 			mounts: true,
 			redirects: true,
@@ -200,6 +205,14 @@ export const deployApplication = async ({
 			command += await cloneGitRepository(applicationEntity);
 		} else if (application.sourceType === "docker") {
 			command += await buildRemoteDocker(application);
+		}
+
+		if (application.sourceType !== "docker") {
+			command += await generateApplyPatchesCommand({
+				id: application.applicationId,
+				type: "application",
+				serverId,
+			});
 		}
 
 		command += await getBuildCommand(application);
@@ -408,6 +421,8 @@ export const deployPreviewApplication = async ({
 		application.env = `${application.previewEnv}\nDOKPLOY_DEPLOY_URL=${previewDeployment?.domain?.host}`;
 		application.buildArgs = `${application.previewBuildArgs}\nDOKPLOY_DEPLOY_URL=${previewDeployment?.domain?.host}`;
 		application.buildSecrets = `${application.previewBuildSecrets}\nDOKPLOY_DEPLOY_URL=${previewDeployment?.domain?.host}`;
+		application.customNetworkIds =
+			application.previewNetworkIds || application.customNetworkIds;
 		application.rollbackActive = false;
 		application.buildRegistry = null;
 		application.rollbackRegistry = null;
@@ -527,6 +542,8 @@ export const rebuildPreviewApplication = async ({
 		application.env = `${application.previewEnv}\nDOKPLOY_DEPLOY_URL=${previewDeployment?.domain?.host}`;
 		application.buildArgs = `${application.previewBuildArgs}\nDOKPLOY_DEPLOY_URL=${previewDeployment?.domain?.host}`;
 		application.buildSecrets = `${application.previewBuildSecrets}\nDOKPLOY_DEPLOY_URL=${previewDeployment?.domain?.host}`;
+		application.customNetworkIds =
+			application.previewNetworkIds || application.customNetworkIds;
 		application.rollbackActive = false;
 		application.buildRegistry = null;
 		application.rollbackRegistry = null;
